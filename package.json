@@ -3,8 +3,8 @@
   "version": "2.7.0-beta.2",
   "packageManager": "pnpm@7.1.0",
   "description": "Reactive, component-oriented view layer for modern web interfaces.",
-  "main": "dist/vue.runtime.common.js",
-  "module": "dist/vue.runtime.esm.js",
+  "main": "dist/vue.runtime.common.js", // 用于 browserify 或 webpack 1
+  "module": "dist/vue.runtime.esm.js", // 用于 webpack2+ 或 Rollup，构建工具优先使用 module 代替 main
   "unpkg": "dist/vue.js",
   "jsdelivr": "dist/vue.js",
   "typings": "types/index.d.ts",
@@ -35,10 +35,15 @@
   },
   "sideEffects": false,
   "scripts": {
+    // 构建完整版 umd 模块的 Vue
     "dev": "rollup -w -c scripts/config.js --environment TARGET:full-dev",
+    // 构建运行时 cjs 模块的 Vue
     "dev:cjs": "rollup -w -c scripts/config.js --environment TARGET:runtime-cjs-dev",
+    // 构建运行时 es 模块的 Vue
     "dev:esm": "rollup -w -c scripts/config.js --environment TARGET:runtime-esm",
+    // 构建 web-server-renderer 包
     "dev:ssr": "rollup -w -c scripts/config.js --environment TARGET:server-renderer",
+    // 构建 Compiler 包（将 Compiler 抽离为单独的包？）
     "dev:compiler": "rollup -w -c scripts/config.js --environment TARGET:compiler ",
     "build": "node scripts/build.js",
     "build:ssr": "npm run build -- runtime-cjs,server-renderer",
