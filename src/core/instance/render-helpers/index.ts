@@ -10,6 +10,8 @@ import { bindObjectListeners } from './bind-object-listeners'
 import { resolveScopedSlots } from './resolve-scoped-slots'
 import { bindDynamicKeys, prependModifier } from './bind-dynamic-keys'
 
+// 这个方法在 Vue.prototype 的原型上定义了一系列的方法，
+// 例如 _v、_e 等这些方法在基于虚拟 DOM 渲染用户界面的时候有用到，即模板编译
 export function installRenderHelpers(target: any) {
   target._o = markOnce
   target._n = toNumber

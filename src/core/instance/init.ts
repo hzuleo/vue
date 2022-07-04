@@ -14,6 +14,7 @@ import { EffectScope } from 'v3/reactivity/effectScope'
 let uid = 0
 
 export function initMixin(Vue: typeof Component) {
+  // 内部初始化的方法，在 new Vue() 时会被调用
   Vue.prototype._init = function (options?: Record<string, any>) {
     const vm: Component = this
     // a uid
@@ -55,6 +56,7 @@ export function initMixin(Vue: typeof Component) {
     }
     // expose real self
     vm._self = vm
+    // 生命周期
     initLifecycle(vm)
     initEvents(vm)
     initRender(vm)

@@ -356,9 +356,14 @@ export function stateMixin(Vue: typeof Component) {
       warn(`$props is readonly.`, this)
     }
   }
+  // 比较关键的代码在这里，在 Vue.prototype 上定义了两个属性 $data 和 $props
+  // 可以看到上面 dataDef 的定义，$data 属性实际上代理的是 _data 这个实例属性，
+  // 然后有一个是否为开发环境的判断，如果是开发环境的话，就为 $data 和 $props
+  // 这两个属性设置一下 set，说明 $data 和 $props 是只读属性
   Object.defineProperty(Vue.prototype, '$data', dataDef)
   Object.defineProperty(Vue.prototype, '$props', propsDef)
 
+  // 接着，定义了一下三个方法，这三个方法看到名字应该比较熟悉了
   Vue.prototype.$set = set
   Vue.prototype.$delete = del
 

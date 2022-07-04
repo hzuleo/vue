@@ -1,3 +1,7 @@
+// 对 Vue 进行平台化地包装
+// 在 Vue.options 上混合了两个指令(directives)，分别是 model 和 show。
+// 在 Vue.options 上混合了两个组件(components)，分别是 Transition 和 TransitionGroup。
+// 在 Vue.prototype 上添加了两个方法：__patch__ 和 $mount。
 import Vue from 'core/index'
 import config from 'core/config'
 import { extend, noop } from 'shared/util'
@@ -19,6 +23,7 @@ import platformComponents from './components/index'
 import type { Component } from 'types/component'
 
 // install platform specific utils
+// Vue 的 config 不是在开发环境不可以修复吗？为啥这里直接可以修改？
 Vue.config.mustUseProp = mustUseProp
 Vue.config.isReservedTag = isReservedTag
 Vue.config.isReservedAttr = isReservedAttr
@@ -26,6 +31,29 @@ Vue.config.getTagNamespace = getTagNamespace
 Vue.config.isUnknownElement = isUnknownElement
 
 // install platform runtime directives & components
+// 执行之前 Vue.options 的样子：
+// Vue.options = {
+//	 components: {
+//	   KeepAlive
+//	 },
+//	 directives: Object.create(null),
+//	 filters: Object.create(null),
+//	 _base: Vue
+// }
+// 执行之后：
+// Vue.options = {
+//	 components: {
+//		 KeepAlive,
+//		 Transition,
+//		 TransitionGroup
+//	 },
+//	 directives: {
+//		 model,
+//		 show
+//	 },
+//	 filters: Object.create(null),
+//	 _base: Vue
+// }
 extend(Vue.options.directives, platformDirectives)
 extend(Vue.options.components, platformComponents)
 

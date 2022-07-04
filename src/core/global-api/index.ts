@@ -28,10 +28,14 @@ export function initGlobalAPI(Vue: GlobalAPI) {
       )
     }
   }
+  // 和 stateMixin 的 $data 以及 $props 一样，也是一个只读的属性
   Object.defineProperty(Vue, 'config', configDef)
 
   // exposed util methods.
   // NOTE: these are not considered part of the public API - avoid relying on
+  // NOTE 的大概意思是 Vue.util 以及 util 下的四个方法都不被认为是公共 API 的一部分
+  // 要避免依赖他们，但是你依然可以使用，只不过风险你要自己控制。
+  // 并且，在官方文档上也并没有介绍这个全局 API，所以能不用尽量不要用。
   // them unless you are aware of the risk.
   Vue.util = {
     warn,
@@ -51,6 +55,13 @@ export function initGlobalAPI(Vue: GlobalAPI) {
   }
 
   Vue.options = Object.create(null)
+  // 当下面这段代码执行完后 Vue.options 将变成这样：
+  // Vue.options = {
+	//   components: Object.create(null),
+	//   directives: Object.create(null),
+	//   filters: Object.create(null),
+	//   _base: Vue
+  // }
   ASSET_TYPES.forEach(type => {
     Vue.options[type + 's'] = Object.create(null)
   })
@@ -59,6 +70,10 @@ export function initGlobalAPI(Vue: GlobalAPI) {
   // components with in Weex's multi-instance scenarios.
   Vue.options._base = Vue
 
+  // 这段代码执行完后：
+  // Vue.options.components = {
+	//   KeepAlive
+  // }
   extend(Vue.options.components, builtInComponents)
 
   initUse(Vue)

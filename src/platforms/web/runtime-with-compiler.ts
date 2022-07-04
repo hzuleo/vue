@@ -17,7 +17,9 @@ const idToTemplate = cached(id => {
   return el && el.innerHTML
 })
 
+// 使用 mount 变量缓存 Vue.prototype.$mount 方法
 const mount = Vue.prototype.$mount
+// 关键代码一：重写 Vue.prototype.$mount 方法
 Vue.prototype.$mount = function (
   el?: string | Element,
   hydrating?: boolean
@@ -105,6 +107,7 @@ function getOuterHTML(el: Element): string {
   }
 }
 
+// 关键代码二：添加 compile 全局 API
 Vue.compile = compileToFunctions
 
 export default Vue as GlobalAPI

@@ -2,6 +2,11 @@ import { ASSET_TYPES } from 'shared/constants'
 import type { GlobalAPI } from 'types/global-api'
 import { isFunction, isPlainObject, validateComponentName } from '../util/index'
 
+// 执行完该方法，Vue 多了三个静态方法：
+// Vue.component
+// Vue.directive
+// Vue.filter
+// 这三个方法分别用来全局注册组件，指令和过滤器。
 export function initAssetRegisters(Vue: GlobalAPI) {
   /**
    * Create asset registration methods.
