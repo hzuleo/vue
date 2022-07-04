@@ -1,3 +1,4 @@
+// Vue 的构建配置文件
 const path = require('path')
 const alias = require('@rollup/plugin-alias')
 const cjs = require('@rollup/plugin-commonjs')
@@ -31,9 +32,17 @@ const consolidatePath = require.resolve('@vue/consolidate/package.json', {
   paths: [path.resolve(__dirname, '../packages/compiler-sfc')]
 })
 
+// Vue 有三种不同的构建输出，分别是：umd、cjs 以及 es
+// umd：可以直接使用 <script> 标签引用 Vue 的模块形式
+// cjs：browserify、webpack1、服务器使用
+// es：webpack2+、Rollup
+// 以下输出是有分为运行时版 与 完整版，我们知道 运行时版 + Compiler = 完整版
+// Compiler 除了可以在运行的时候完成将字符串模板编译为 render 函数，也可以在构建的时候就可以完成
+// 那么真正运行的代码就免去了这样一个步骤，提升了性能，完整版其实就是允许你在代码运行的时候去现场编译模板
 const builds = {
   // Runtime only (CommonJS). Used by bundlers e.g. Webpack & Browserify
   'runtime-cjs-dev': {
+    // 运行时的入口文件
     entry: resolve('web/entry-runtime.ts'),
     dest: resolve('dist/vue.runtime.common.dev.js'),
     format: 'cjs',
@@ -49,6 +58,7 @@ const builds = {
   },
   // Runtime+compiler CommonJS build (CommonJS)
   'full-cjs-dev': {
+    // 完整版的入口文件
     entry: resolve('web/entry-runtime-with-compiler.ts'),
     dest: resolve('dist/vue.common.dev.js'),
     format: 'cjs',
@@ -141,6 +151,7 @@ const builds = {
     banner
   },
   // Web compiler (CommonJS).
+  // 这里是将 Compiler 抽离为单独的包？
   compiler: {
     entry: resolve('web/entry-compiler.ts'),
     dest: resolve('packages/template-compiler/build.js'),
