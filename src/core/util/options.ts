@@ -1,3 +1,13 @@
+// 合并处理选项：
+// 对于 el、propsData 选项使用默认的合并策略 defaultStrat。
+// 对于 data 选项，使用 mergeDataOrFn 函数进行处理，最终结果是 data 选项将变成一个函数，且该函数的执行结果为真正的数据对象。
+// 对于 生命周期钩子 选项，将合并成数组，使得父子选项中的钩子函数都能够被执行
+// 对于 directives、filters 以及 components 等资源选项，父子选项将以原型链的形式被处理，正是因为这样我们才能够在任何地方都使用内置组件、指令等。
+// 对于 watch 选项的合并处理，类似于生命周期钩子，如果父子选项都有相同的观测字段，将被合并为数组，这样观察者都将被执行。
+// 对于 props、methods、inject、computed 选项，父选项始终可用，但是子选项会覆盖同名的父选项字段。
+// 对于 provide 选项，其合并策略使用与 data 选项相同的 mergeDataOrFn 函数。
+// 最后，以上没有提及到的选项都将使默认选项 defaultStrat。
+// 最最后，默认合并策略函数 defaultStrat 的策略是：只要子选项不是 undefined 就使用子选项，否则使用父选项。
 import config from '../config'
 import { warn } from './debug'
 import { set } from '../observer/index'
@@ -19,6 +29,7 @@ import {
 import type { Component } from 'types/component'
 import type { ComponentOptions } from 'types/options'
 
+// 选项合并策略
 /**
  * Option overwriting strategies are functions that handle
  * how to merge a parent option value and a child option
@@ -36,6 +47,7 @@ if (__DEV__) {
     vm: any,
     key: any
   ) {
+    // 没有 vm 参数时，说明处理的是子组件的选项，即使用 Vue.extend
     if (!vm) {
       warn(
         `option "${key}" can only be used during instance ` +
@@ -67,6 +79,7 @@ function mergeData(
     toVal = to[key]
     fromVal = from[key]
     if (!hasOwn(to, key)) {
+      // 这个 set 函数是设置对象的属性，如果对象是响应式的，确保属性被创建后也是响应式的，同时触发视图更新
       set(to, key, fromVal)
     } else if (
       toVal !== fromVal &&
@@ -79,6 +92,9 @@ function mergeData(
   return to
 }
 
+// strats.data 永远返回一个函数，data 选项最终被处理为一个函数，为啥会被处理成一个函数？
+// 因为通过函数返回数据对象，保证了每个组件实例都有一个唯一的数据副本，避免了组件间数据互相影响。
+// 在初始化数据状态的时候，就是通过执行 strats.data 函数来获取数据并对其进行处理的
 /**
  * Data
  */
@@ -89,9 +105,11 @@ export function mergeDataOrFn(
 ): Function | null {
   if (!vm) {
     // in a Vue.extend merge, both should be functions
+    // 例如：Vue.extend({})
     if (!childVal) {
       return parentVal
     }
+    //
     if (!parentVal) {
       return childVal
     }
@@ -101,12 +119,14 @@ export function mergeDataOrFn(
     // check if parentVal is a function here because
     // it has to be a function to pass previous merges.
     return function mergedDataFn() {
+      // 两个参数就是两个纯对象
       return mergeData(
         isFunction(childVal) ? childVal.call(this, this) : childVal,
         isFunction(parentVal) ? parentVal.call(this, this) : parentVal
       )
     }
   } else {
+    // 合并处理的是非子组件的选项时 `data` 函数为 `mergedInstanceDataFn` 函数
     return function mergedInstanceDataFn() {
       // instance merge
       const instanceData = isFunction(childVal)
@@ -116,6 +136,7 @@ export function mergeDataOrFn(
         ? parentVal.call(vm, vm)
         : parentVal
       if (instanceData) {
+        // 两个参数就是两个纯对象
         return mergeData(instanceData, defaultData)
       } else {
         return defaultData
@@ -124,12 +145,15 @@ export function mergeDataOrFn(
   }
 }
 
+// 合并处理 data 选项
 strats.data = function (
   parentVal: any,
   childVal: any,
   vm?: Component
 ): Function | null {
+  // 没有 vm 参数时，说明处理的是子组件的选项
   if (!vm) {
+    // 子组件的 data 选项必须是一个 function
     if (childVal && typeof childVal !== 'function') {
       __DEV__ &&
         warn(
@@ -147,6 +171,7 @@ strats.data = function (
   return mergeDataOrFn(parentVal, childVal, vm)
 }
 
+// 相同的生命周期会合并为数组
 /**
  * Hooks and props are merged as arrays.
  */
@@ -178,6 +203,7 @@ LIFECYCLE_HOOKS.forEach(hook => {
   strats[hook] = mergeLifecycleHook
 })
 
+// 合并处理 directives、filters 以及 components 等资源选项
 /**
  * Assets
  *
@@ -204,6 +230,7 @@ ASSET_TYPES.forEach(function (type) {
   strats[type + 's'] = mergeAssets
 })
 
+// 合并处理 watch 选项
 /**
  * Watchers.
  *
@@ -228,7 +255,9 @@ strats.watch = function (
   }
   if (!parentVal) return childVal
   const ret: Record<string, any> = {}
+  // 将 parentVal 的属性混合到 ret 中，后面处理的都将是 ret 对象，最后返回的也是 ret 对象
   extend(ret, parentVal)
+  // 检测子选项中的值是否也在父选项中，如果在的话将父子选项合并到一个数组，否则直接把子选项变成一个数组返回。
   for (const key in childVal) {
     let parent = ret[key]
     const child = childVal[key]
@@ -240,6 +269,7 @@ strats.watch = function (
   return ret
 }
 
+// 选项 props、methods、inject、computed 的合并策略
 /**
  * Other object hashes.
  */
@@ -257,13 +287,18 @@ strats.props =
         assertObjectType(key, childVal, vm)
       }
       if (!parentVal) return childVal
+      // 如果 parentVal 存在，则创建 ret 对象，然后分别将 parentVal 和 childVal 的属性混合到 ret 中，
+      // 注意：由于 childVal 将覆盖 parentVal 的同名属性
       const ret = Object.create(null)
       extend(ret, parentVal)
       if (childVal) extend(ret, childVal)
       return ret
     }
+
+// provide 选项的合并策略与 data 选项的合并策略相同，都是使用 mergeDataOrFn 函数
 strats.provide = mergeDataOrFn
 
+// defaultStrat 的策略是：只要子选项不是 undefined 就使用子选项，否则使用父选项。
 /**
  * Default strategy.
  */
@@ -271,6 +306,7 @@ const defaultStrat = function (parentVal: any, childVal: any): any {
   return childVal === undefined ? parentVal : childVal
 }
 
+// 用来校验组件的名字是否符合要求
 /**
  * Validate component names
  */
@@ -291,6 +327,8 @@ export function validateComponentName(name: string) {
         'should conform to valid custom element name in html5 specification.'
     )
   }
+  // isBuiltInTag 检测所注册的组件是否是内置的标签
+  // isReservedTag 检测是否为 html 标签和部分 SVG 标签
   if (isBuiltInTag(name) || config.isReservedTag(name)) {
     warn(
       'Do not use built-in or reserved HTML elements as component ' +
@@ -300,6 +338,16 @@ export function validateComponentName(name: string) {
   }
 }
 
+// 规范化 props 选项，统一规范化为：
+// props: {
+//  someData1: {
+//    type: Number
+//  },
+//  someData2: {
+//    type: String,
+//    default: ''
+//  }
+// }
 /**
  * Ensure all props option syntax are normalized into the
  * Object-based format.
@@ -336,6 +384,11 @@ function normalizeProps(options: Record<string, any>, vm?: Component | null) {
   options.props = res
 }
 
+// 规范化 inject，统一规范化为：
+// {
+//  'data1': { from: 'data1' },
+//  'data2': { from: 'data2' }
+// }
 /**
  * Normalize all injections into Object-based format
  */
@@ -363,6 +416,7 @@ function normalizeInject(options: Record<string, any>, vm?: Component | null) {
   }
 }
 
+// 规范化 directives 选项
 /**
  * Normalize raw function directives into object format.
  */
@@ -388,6 +442,7 @@ function assertObjectType(name: string, value: any, vm: Component | null) {
   }
 }
 
+// 用来合并两个选项对象为一个新对象的通用程序。
 /**
  * Merge two option objects into a new one.
  * Core utility used in both instantiation and inheritance.
@@ -397,6 +452,7 @@ export function mergeOptions(
   child: Record<string, any>,
   vm?: Component | null
 ): ComponentOptions {
+  // 校验检测是在开发环境下去检测，生产环境是不会去校验检测的
   if (__DEV__) {
     checkComponents(child)
   }
@@ -419,6 +475,7 @@ export function mergeOptions(
       parent = mergeOptions(parent, child.extends, vm)
     }
     if (child.mixins) {
+       // 将 mixins 合并到了 parent 中
       for (let i = 0, l = child.mixins.length; i < l; i++) {
         parent = mergeOptions(parent, child.mixins[i], vm)
       }

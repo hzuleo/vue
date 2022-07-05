@@ -18,10 +18,12 @@ export function initMixin(Vue: typeof Component) {
   Vue.prototype._init = function (options?: Record<string, any>) {
     const vm: Component = this
     // a uid
+    // 每个 Vue 实例都拥有一个唯一的 id，这里每次初始化时都会加 1
     vm._uid = uid++
 
     let startTag, endTag
     /* istanbul ignore if */
+    // config.performance 用于开启性能追踪，
     if (__DEV__ && config.performance && mark) {
       startTag = `vue-perf-start:${vm._uid}`
       endTag = `vue-perf-end:${vm._uid}`
@@ -30,20 +32,41 @@ export function initMixin(Vue: typeof Component) {
 
     // a flag to mark this as a Vue instance without having to do instanceof
     // check
+    // 标识一个对象是 Vue 实例，避免该对象被响应系统观测
     vm._isVue = true
     // avoid instances from being observed
     vm.__v_skip = true
     // effect scope
     vm._scope = new EffectScope(true /* detached */)
     // merge options
+    // _isComponent 是什么？
     if (options && options._isComponent) {
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the
       // internal component options needs special treatment.
       initInternalComponent(vm, options as any)
     } else {
+      // 添加了 $options 属性，这个属性用于当前 Vue 的初始化，主要是给下面的一系列 init* 方法中使用
+      // 执行完 resolveConstructorOptions 该代码后：
+      // vm.$options = mergeOptions(
+      //   {
+      //    components: {
+      //      KeepAlive
+      //      Transition,
+      //      TransitionGroup
+      //    },
+      //    directives:{
+      //      model,
+      //      show
+      //    },
+      //    filters: Object.create(null),
+      //    _base: Vue
+      //  },
+      //  options || {},
+      //  vm
+      // )
       vm.$options = mergeOptions(
-        resolveConstructorOptions(vm.constructor as any),
+        resolveConstructorOptions(vm.constructor as any), // 其实就是 Vue.options
         options || {},
         vm
       )
@@ -101,8 +124,12 @@ export function initInternalComponent(
   }
 }
 
+// 获取当前实例构造者的 options 属性
 export function resolveConstructorOptions(Ctor: typeof Component) {
+  // 就是 Vue.options
   let options = Ctor.options
+  // super 是子类才有的属性，所以使用 new Vue() 时是不会走下面的流程的，
+  // 这里的 super 属性是与 Vue.extend 有关系的，即 const Sub = Vue.extend()
   if (Ctor.super) {
     const superOptions = resolveConstructorOptions(Ctor.super)
     const cachedSuperOptions = Ctor.superOptions
