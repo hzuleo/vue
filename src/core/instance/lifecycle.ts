@@ -20,6 +20,7 @@ import {
 import { currentInstance, setCurrentInstance } from 'v3/currentInstance'
 import { syncSetupAttrs } from 'v3/apiSetup'
 
+// 保存着当前正在渲染的实例的引用
 export let activeInstance: any = null
 export let isUpdatingChildComponent: boolean = false
 
@@ -34,16 +35,25 @@ export function setActiveInstance(vm: Component) {
 export function initLifecycle(vm: Component) {
   const options = vm.$options
 
+  // 将当前实例添加到父实例的 $children 属性里，并设置当前实例的 $parent 指向父实例
   // locate first non-abstract parent
+  // 这里的 parent 属性是在哪里的？
   let parent = options.parent
+  // 如果当前实例有父组件，且当前实例不是抽象的
   if (parent && !options.abstract) {
+    // 使用 while 循环查找第一个非抽象的父组件
+    // 抽象组件：一般不渲染真实 DOM、不会出现在父子关系的路径上，例如 keep-alive
     while (parent.$options.abstract && parent.$parent) {
       parent = parent.$parent
     }
+    // 经过上面的 while 循环后，parent 应该是一个非抽象的组件，
+    // 将它作为当前实例的父级，所以将当前实例 vm 添加到父级的 $children 属性里
     parent.$children.push(vm)
   }
 
+  // 设置当前实例的 $parent 属性，指向父级
   vm.$parent = parent
+  // 设置 $root 属性，有父级就是用父级的 $root，否则 $root 指向自身
   vm.$root = parent ? parent.$root : vm
 
   vm.$children = []
@@ -375,9 +385,11 @@ export function deactivateChildComponent(vm: Component, direct?: boolean) {
 
 export function callHook(vm: Component, hook: string, args?: any[]) {
   // #7573 disable dep collection when invoking lifecycle hooks
+  // 避免在某些生命周期钩子中使用 props 数据导致收集冗余的依赖
   pushTarget()
   const prev = currentInstance
   setCurrentInstance(vm)
+  // 这里 handlers 是一个数组
   const handlers = vm.$options[hook]
   const info = `${hook} hook`
   if (handlers) {
@@ -385,6 +397,13 @@ export function callHook(vm: Component, hook: string, args?: any[]) {
       invokeWithErrorHandling(handlers[i], vm, args || null, vm, info)
     }
   }
+  // 是否存在生命周期钩子的事件侦听器，什么叫做生命周期钩子的事件侦听器？
+  //  <child
+  //  @hook:beforeCreate="handleChildBeforeCreate"
+  //  @hook:created="handleChildCreated"
+  //  @hook:mounted="handleChildMounted"
+  //  @hook:生命周期钩子
+  //  />
   if (vm._hasHookEvent) {
     vm.$emit('hook:' + hook)
   }

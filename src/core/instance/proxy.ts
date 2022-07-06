@@ -6,6 +6,7 @@ import { warn, makeMap, isNative } from '../util/index'
 let initProxy
 
 if (__DEV__) {
+  // 判断给定的 key 是否出现在下面字符串中定义的关键字中的
   const allowedGlobals = makeMap(
     'Infinity,undefined,NaN,isFinite,isNaN,' +
       'parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,' +
@@ -37,9 +38,11 @@ if (__DEV__) {
   const hasProxy = typeof Proxy !== 'undefined' && isNative(Proxy)
 
   if (hasProxy) {
+    // 检测是否是内置的修饰符
     const isBuiltInModifier = makeMap(
       'stop,prevent,self,ctrl,shift,alt,meta,exact'
     )
+    // 防止内置修饰符被覆盖
     config.keyCodes = new Proxy(config.keyCodes, {
       set(target, key: string, value) {
         if (isBuiltInModifier(key)) {
@@ -55,6 +58,11 @@ if (__DEV__) {
     })
   }
 
+  // has 可以拦截以下操作：
+  // 属性查询: foo in proxy
+  // 继承属性查询: foo in Object.create(proxy)
+  // with 检查: with(proxy) { (foo); }
+  // Reflect.has()
   const hasHandler = {
     has(target, key) {
       const has = key in target
@@ -85,6 +93,8 @@ if (__DEV__) {
     if (hasProxy) {
       // determine which proxy handler to use
       const options = vm.$options
+      // handlers 可能是 getHandler 也可能是 hasHandler
+      // _withStripped 这个属性只在测试代码中出现过
       const handlers =
         options.render && options.render._withStripped ? getHandler : hasHandler
       vm._renderProxy = new Proxy(vm, handlers)

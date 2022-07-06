@@ -71,6 +71,9 @@ export function initMixin(Vue: typeof Component) {
         vm
       )
     }
+    // 设置渲染函数的作用域代理
+    // 在 Vue.prototype._render 方法，有这句代码
+    // vnode = render.call(vm._renderProxy, vm.$createElement)
     /* istanbul ignore else */
     if (__DEV__) {
       initProxy(vm)
