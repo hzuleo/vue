@@ -43,16 +43,32 @@ export class Observer {
 
   constructor(public value: any, public shallow = false) {
     // this.value = value
+    // 收集依赖的“筐”，这个“筐”并不属于某一个字段，后面我们会发现，这个筐是属于某一个对象或数组的。
     this.dep = new Dep()
     this.vmCount = 0
+    // 使用 def 函数定义 __ob__ 属性是因为这样可以定义不可枚举的属性，
+    // 这样后面遍历数据对象的时候就能够防止遍历到 __ob__ 属性。
+    // 例如数据对象：const data = { a: 1 }，经过 def 函数处理之后，data 对象应该变成如下这个样子：
+    // const data = {
+    //   a: 1,
+    //   __ob__: {
+    //     value: data,
+    //     dep: dep实例对象,
+    //     vmCount: 0
+    //   }
+    // }
     def(value, '__ob__', this)
+    // 数组有很多变异方法会改变数组本身的值，例如：
+    // push、pop、shift、unshift、splice、sort 以及 reverse 等
     if (isArray(value)) {
       if (hasProto) {
         protoAugment(value, arrayMethods)
       } else {
+        // 兼容浏览器 ie11 之前
         copyAugment(value, arrayMethods, arrayKeys)
       }
       if (!shallow) {
+        // 递归观测数组元素
         this.observeArray(value)
       }
     } else {
@@ -117,12 +133,18 @@ export function observe(value: any, shallow?: boolean): Observer | void {
     return
   }
   let ob: Observer | void
+  // 一个数据对象被观测之后将会在该对象上定义 __ob__ 属性
+  // if 分支的作用是用来避免重复观测一个数据对象
   if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
     ob = value.__ob__
   } else if (
+    // 没有定义 __ob__ 属性，那么说明该对象没有被观测过
     shouldObserve &&
     !isServerRendering() &&
     (isArray(value) || isPlainObject(value)) &&
+    // 被观测的数据对象必须是可扩展的。一个普通的对象默认就是可扩展的
+    // 以下三个方法都可以使得一个对象变得不可扩展：
+    // Object.preventExtensions()、Object.freeze() 以及 Object.seal()。
     Object.isExtensible(value) &&
     !value.__v_skip
   ) {
@@ -134,6 +156,7 @@ export function observe(value: any, shallow?: boolean): Observer | void {
 /**
  * Define a reactive property on an Object.
  */
+// 将数据对象的数据属性转换为访问器属性，即为数据对象的属性设置一对 getter/setter
 export function defineReactive(
   obj: object,
   key: string,
@@ -141,8 +164,10 @@ export function defineReactive(
   customSetter?: Function | null,
   shallow?: boolean
 ) {
+  // 每个字段的 Dep 对象都被用来收集那些属于对应字段的依赖。
   const dep = new Dep()
 
+  // 不可配置的属性是不能使用也没必要使用 Object.defineProperty 改变其属性定义的
   const property = Object.getOwnPropertyDescriptor(obj, key)
   if (property && property.configurable === false) {
     return
@@ -152,16 +177,21 @@ export function defineReactive(
   const getter = property && property.get
   const setter = property && property.set
   if (
+    // 之所以在深度观测之前不取值是因为属性原本的 getter 由用户定义，
+    // 用户可能在 getter 中做任何意想不到的事情，这么做是出于避免引发不可预见行为的考虑。
     (!getter || setter) &&
     (val === NO_INIITIAL_VALUE || arguments.length === 2)
   ) {
     val = obj[key]
   }
 
+  // 深度观测，val 本身有可能也是一个对象，例如对象：const data = { a: { b: 1 } }
+  // 那么：childOb === data.a.__ob__
   let childOb = !shallow && observe(val)
   Object.defineProperty(obj, key, {
     enumerable: true,
     configurable: true,
+    // get作用：一个是返回正确的属性值，另一个是收集依赖
     get: function reactiveGetter() {
       const value = getter ? getter.call(obj) : val
       if (Dep.target) {
@@ -172,17 +202,27 @@ export function defineReactive(
             key
           })
         } else {
+          // 每一个数据字段都通过闭包引用着属于自己的 dep 常量
           dep.depend()
         }
         if (childOb) {
+          // 这里的 dep 和上面的 dep 是不同的，两个”筐“里收集的依赖的触发时机是不同的，即作用不同
+          // 为了添加、删除属性时有能力触发依赖，而这就是 Vue.set 或 Vue.delete 的原理。
           childOb.dep.depend()
           if (isArray(value)) {
+            // 例如数据：{ arr: [ { a: 1 } ] }
+            // ins.$set(ins.$data.arr[0], 'b', 2) 为了能让这句代码触发依赖
+            // 为什么数组需要这样处理，而纯对象不需要呢？那是因为 数组的索引是非响应式的
+            // ins.arr[0] = 3  // 不能触发响应
+            // 所以当有观察者依赖数组的某一个元素时是触发不了这个元素的 get 函数的，当然也就收集不到依赖
+            // 这个时候就是 dependArray 函数发挥作用的时候了。
             dependArray(value)
           }
         }
       }
       return isRef(value) ? value.value : value
     },
+    // set 作用：第一正确地为属性设置新值，第二是能够触发相应的依赖。
     set: function reactiveSetter(newVal) {
       const value = getter ? getter.call(obj) : val
       if (!hasChanged(value, newVal)) {
@@ -202,6 +242,7 @@ export function defineReactive(
       } else {
         val = newVal
       }
+      // 设置的新值是一个数组或者纯对象，就需要对新值进行观测
       childOb = !shallow && observe(newVal)
       if (__DEV__) {
         dep.notify({
@@ -242,14 +283,17 @@ export function set(
     return
   }
   if (isArray(target) && isValidArrayIndex(key)) {
+    // 数组的长度修改为 target.length 和 key 中的较大者
     target.length = Math.max(target.length, key)
     target.splice(key, 1, val)
     return val
   }
+  // 已存在的属性是响应式的
   if (key in target && !(key in Object.prototype)) {
     target[key] = val
     return val
   }
+  // Vue 实例对象拥有 _isVue 属性
   const ob = (target as any).__ob__
   if ((target as any)._isVue || (ob && ob.vmCount)) {
     __DEV__ &&
@@ -263,6 +307,7 @@ export function set(
     target[key] = val
     return val
   }
+  // 这是为了保证新添加的属性是响应式的
   defineReactive(ob.value, key, val)
   if (__DEV__) {
     ob.dep.notify({
@@ -294,6 +339,7 @@ export function del(target: any[] | object, key: any) {
     return
   }
   const ob = (target as any).__ob__
+  // vmCount 不允许删除根数据对象的属性，因为根数据不是响应式
   if ((target as any)._isVue || (ob && ob.vmCount)) {
     __DEV__ &&
       warn(
@@ -311,6 +357,7 @@ export function del(target: any[] | object, key: any) {
     return
   }
   delete target[key]
+  // 判断 ob 对象是否存在，如果不存在说明 target 对象原本就不是响应的
   if (!ob) {
     return
   }

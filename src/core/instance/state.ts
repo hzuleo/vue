@@ -119,8 +119,18 @@ function initProps(vm: Component, propsOptions: Object) {
   toggleObserving(true)
 }
 
+// 主要完成如下工作：
+// 根据 vm.$options.data 选项获取真正想要的数据（注意：此时 vm.$options.data 是函数）
+// 校验得到的数据是否是一个纯对象
+// 检查数据对象 data 上的键是否与 props 对象上的键冲突
+// 检查 methods 对象上的键是否与 data 对象上的键冲突
+// 在 Vue 实例对象上添加代理访问数据对象的同名属性
+// 最后调用 observe 函数开启响应式之路
 function initData(vm: Component) {
   let data: any = vm.$options.data
+  // beforeCreate 生命周期钩子函数是在 mergeOptions 函数之后 initData 之前被调用的
+  // 如果在 beforeCreate 生命周期钩子函数中修改了 vm.$options.data 的值，
+  // 那么在 initData 函数中对于 vm.$options.data 类型的判断就是必要的了。
   data = vm._data = isFunction(data) ? getData(data, vm) : data || {}
   if (!isPlainObject(data)) {
     data = {}
@@ -138,7 +148,9 @@ function initData(vm: Component) {
   let i = keys.length
   while (i--) {
     const key = keys[i]
+    // 优先级的关系：props 优先级 > methods 优先级 > data 优先级
     if (__DEV__) {
+      // 你定义在 methods 对象中的函数名称已经被作为 data 对象中某个数据字段的 key 了，你应该换一个函数名字
       if (methods && hasOwn(methods, key)) {
         warn(`Method "${key}" has already been defined as a data property.`, vm)
       }
@@ -150,16 +162,21 @@ function initData(vm: Component) {
             `Use prop default value instead.`,
           vm
         )
+    // 判断定义在 data 中的 key 是否是保留键，isReserved 判断字符串是否以 $ 或者 _ 开头
     } else if (!isReserved(key)) {
+      // 代理 _data 访问值
       proxy(vm, `_data`, key)
     }
   }
+  // 响应系统的开始
   // observe data
   const ob = observe(data)
   ob && ob.vmCount++
 }
 
+// “通过调用 data 选项从而获取数据对象
 export function getData(data: Function, vm: Component): any {
+  // 防止使用 props 数据初始化 data 数据时收集冗余的依赖
   // #7573 disable dep collection when invoking data getters
   pushTarget()
   try {

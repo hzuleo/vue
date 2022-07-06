@@ -17,6 +17,7 @@ function Vue(options) {
 }
 
 // 将 Vue 作为参数传递给导入的五个方法
+// 在 Vue 的原型上添加了 _init 方法，这个 _init 方法是内部初始化的一个方法
 //@ts-expect-error Vue has function type
 initMixin(Vue)
 //@ts-expect-error Vue has function type

@@ -27,7 +27,9 @@ methodsToPatch.forEach(function (method) {
   const original = arrayProto[method]
   def(arrayMethods, method, function mutator(...args) {
     const result = original.apply(this, args)
+    // this 是数组实例本身，this.__ob__.dep 中收集了所有该对象(或数组)的依赖(观察者)
     const ob = this.__ob__
+    // 用来保存那些被新添加进来的数组元素
     let inserted
     switch (method) {
       case 'push':

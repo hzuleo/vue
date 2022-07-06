@@ -105,7 +105,8 @@ export function mergeDataOrFn(
 ): Function | null {
   if (!vm) {
     // in a Vue.extend merge, both should be functions
-    // 例如：Vue.extend({})
+    // 所以这里也必然是一个函数
+    // 使用场景：Vue.extend({})
     if (!childVal) {
       return parentVal
     }
