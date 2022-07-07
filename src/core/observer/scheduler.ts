@@ -62,6 +62,7 @@ if (inBrowser && !isIE) {
 /**
  * Flush both queues and run the watchers.
  */
+// 将队列中的观察者统一执行更新的
 function flushSchedulerQueue() {
   currentFlushTimestamp = getNow()
   flushing = true
@@ -156,6 +157,7 @@ function callActivatedHooks(queue) {
  */
 export function queueWatcher(watcher: Watcher) {
   const id = watcher.id
+  // 用来避免将相同的观察者重复入队
   if (has[id] != null) {
     return
   }
@@ -168,6 +170,8 @@ export function queueWatcher(watcher: Watcher) {
   if (!flushing) {
     queue.push(watcher)
   } else {
+    // 队列正在执行更新
+    // 这段代码的作用是为了保证观察者的执行顺序
     // if already flushing, splice the watcher based on its id
     // if already past its id, it will be run next immediately.
     let i = queue.length - 1
@@ -178,6 +182,7 @@ export function queueWatcher(watcher: Watcher) {
   }
   // queue the flush
   if (!waiting) {
+    // waiting 保证以下语句只会执行一次
     waiting = true
 
     if (__DEV__ && !config.async) {

@@ -199,6 +199,23 @@ function initComputed(vm: Component, computed: Object) {
 
   for (const key in computed) {
     const userDef = computed[key]
+    // 计算属性有两种写法，一种是函数：
+    // computed: {
+    //   someComputedProp () {
+    //     return this.a + this.b
+    //   }
+    // }
+    // 一种是对象：
+    // computed: {
+    //   someComputedProp: {
+    //     get: function () {
+    //       return this.a + 1
+    //     },
+    //     set: function (v) {
+    //       this.a = v - 1
+    //     }
+    //   }
+    // }
     const getter = isFunction(userDef) ? userDef : userDef.get
     if (__DEV__ && getter == null) {
       warn(`Getter is missing for computed property "${key}".`, vm)
@@ -206,6 +223,7 @@ function initComputed(vm: Component, computed: Object) {
 
     if (!isSSR) {
       // create internal watcher for the computed property.
+      // 对 watchers 常量的修改相当于对 vm._computedWatchers 属性的修改
       watchers[key] = new Watcher(
         vm,
         getter || noop,
@@ -239,11 +257,13 @@ export function defineComputed(
   key: string,
   userDef: Record<string, any> | (() => any)
 ) {
+  // 只有在非服务端渲染的情况下计算属性才会缓存值。
   const shouldCache = !isServerRendering()
   if (isFunction(userDef)) {
     sharedPropertyDefinition.get = shouldCache
       ? createComputedGetter(key)
       : createGetterInvoker(userDef)
+    // 说明该计算属性并没有指定 set 拦截器函数
     sharedPropertyDefinition.set = noop
   } else {
     sharedPropertyDefinition.get = userDef.get
@@ -264,6 +284,14 @@ export function defineComputed(
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
+// 例如代码：
+// computed: {
+//   compA () {
+//     return this.a +1
+//   }
+// }
+// 计算属性 compA 依赖了数据对象的 a 属性，那么属性 a 将收集计算属性 compA 的 计算属性观察者对象，
+// 而 计算属性观察者对象 将收集 渲染函数观察者对象，
 function createComputedGetter(key) {
   return function computedGetter() {
     const watcher = this._computedWatchers && this._computedWatchers[key]
@@ -323,6 +351,17 @@ function initMethods(vm: Component, methods: Object) {
 function initWatch(vm: Component, watch: Object) {
   for (const key in watch) {
     const handler = watch[key]
+    // 可以为一个数组，例如：
+    // watch: {
+    //   name: [
+    //     function () {
+    //       console.log('name 改变了1')
+    //     },
+    //     function () {
+    //       console.log('name 改变了2')
+    //     }
+    //   ]
+    // }
     if (isArray(handler)) {
       for (let i = 0; i < handler.length; i++) {
         createWatcher(vm, key, handler[i])
@@ -333,16 +372,19 @@ function initWatch(vm: Component, watch: Object) {
   }
 }
 
+// 作用就是将纯对象形式的参数规范化一下
 function createWatcher(
   vm: Component,
   expOrFn: string | (() => any),
   handler: any,
   options?: Object
 ) {
+  // 例如：vm.$watch('name', { handler () { console.log('change') }, immediate: true })
   if (isPlainObject(handler)) {
     options = handler
     handler = handler.handler
   }
+  // 例如：watch: { name: 'handleNameChange' },
   if (typeof handler === 'string') {
     handler = vm[handler]
   }
@@ -390,18 +432,23 @@ export function stateMixin(Vue: typeof Component) {
     options?: Record<string, any>
   ): Function {
     const vm: Component = this
+    // cb 不是函数，而是一个纯对象
     if (isPlainObject(cb)) {
       return createWatcher(vm, expOrFn, cb, options)
     }
     options = options || {}
+    // 代表该观察者实例是用户创建的
     options.user = true
     const watcher = new Watcher(vm, expOrFn, cb, options)
+    // immediate 选项用来在属性或函数被侦听后立即执行回调
+    // 不过此时回调函数的参数只有新值没有旧值
     if (options.immediate) {
       const info = `callback for immediate watcher "${watcher.expression}"`
       pushTarget()
       invokeWithErrorHandling(cb, vm, [watcher.value], vm, info)
       popTarget()
     }
+    // 解除当前观察者对属性的观察
     return function unwatchFn() {
       watcher.teardown()
     }

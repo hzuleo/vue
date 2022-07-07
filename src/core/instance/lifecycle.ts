@@ -151,6 +151,7 @@ export function mountComponent(
   el: Element | null | undefined,
   hydrating?: boolean
 ): Component {
+  // vm.$el 是组件模板的根元素
   vm.$el = el
   if (!vm.$options.render) {
     // @ts-expect-error invalid type
@@ -198,7 +199,10 @@ export function mountComponent(
       measure(`vue ${name} patch`, startTag, endTag)
     }
   } else {
+    // 把渲染函数生成的虚拟 DOM 渲染成真正的 DOM
     updateComponent = () => {
+      // vm._render 函数的作用是调用 vm.$options.render 函数并返回生成的虚拟节点(vnode)
+      // vm._update 函数的作用是把 vm._render 函数生成的虚拟节点渲染成真正的 DOM
       vm._update(vm._render(), hydrating)
     }
   }
@@ -219,6 +223,10 @@ export function mountComponent(
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
+  // 创建观察者（渲染函数的观察者）
+  // updateComponent 函数的执行会间接触发渲染函数(vm.$options.render)的执行，
+  // 而渲染函数的执行则会触发数据属性的 get 拦截器函数，从而将依赖(观察者)收集，
+  // 当数据变化时将重新执行 updateComponent 函数，这就完成了重新渲染。
   new Watcher(
     vm,
     updateComponent,
