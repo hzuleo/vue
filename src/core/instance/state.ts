@@ -70,14 +70,19 @@ export function initState(vm: Component) {
 }
 
 function initProps(vm: Component, propsOptions: Object) {
+  // vm.$options.propsData 就是用来存储来自外界的组件数据的
+  // 例如：<some-comp prop1="1" prop2="2" />
+  // 那么：vm.$options.propsData = { prop1: '1', prop2: '2' }
   const propsData = vm.$options.propsData || {}
   const props = (vm._props = {})
   // cache prop keys so that future props updates can iterate using Array
   // instead of dynamic object key enumeration.
   const keys: string[] = (vm.$options._propKeys = [])
+  // 用来标识是否是根组件
   const isRoot = !vm.$parent
   // root instance props should be converted
   if (!isRoot) {
+    // 不对值进行深度定义
     toggleObserving(false)
   }
   for (const key in propsOptions) {
@@ -85,11 +90,14 @@ function initProps(vm: Component, propsOptions: Object) {
     const value = validateProp(key, propsOptions, propsData, vm)
     /* istanbul ignore else */
     if (__DEV__) {
+      // 将 prop 的名字转为连字符加小写的形式
       const hyphenatedKey = hyphenate(key)
       if (
+        // 判断 prop 的名字是否是保留的属性(attribute)
         isReservedAttribute(hyphenatedKey) ||
         config.isReservedAttr(hyphenatedKey)
       ) {
+        // 不要直接修改 props 数据
         warn(
           `"${hyphenatedKey}" is a reserved attribute and cannot be used as component prop.`,
           vm
@@ -116,6 +124,7 @@ function initProps(vm: Component, propsOptions: Object) {
       proxy(vm, `_props`, key)
     }
   }
+  // 开关开启，目的是不影响后续代码的功能，因为这个开关是全局的。
   toggleObserving(true)
 }
 
@@ -325,6 +334,7 @@ function initMethods(vm: Component, methods: Object) {
   const props = vm.$options.props
   for (const key in methods) {
     if (__DEV__) {
+      // 检测该方法是否真正的有定义
       if (typeof methods[key] !== 'function') {
         warn(
           `Method "${key}" has type "${typeof methods[
@@ -334,9 +344,11 @@ function initMethods(vm: Component, methods: Object) {
           vm
         )
       }
+      // 检测 methods 选项中定义的方法名字是否在 props 选项中有定义
       if (props && hasOwn(props, key)) {
         warn(`Method "${key}" has already been defined as a prop.`, vm)
       }
+      // 以字符 $ 或 _ 开头的名字为保留名
       if (key in vm && isReserved(key)) {
         warn(
           `Method "${key}" conflicts with an existing Vue instance method. ` +
@@ -344,6 +356,7 @@ function initMethods(vm: Component, methods: Object) {
         )
       }
     }
+    // 在组件实例对象上定义了与 methods 选项中所定义的同名方法
     vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm)
   }
 }
