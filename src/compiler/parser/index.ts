@@ -212,6 +212,7 @@ export function parse(template: string, options: CompilerOptions): ASTElement {
     }
   }
 
+  // 词法分析
   parseHTML(template, {
     warn,
     expectHTML: options.expectHTML,

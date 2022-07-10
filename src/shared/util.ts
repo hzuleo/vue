@@ -276,6 +276,7 @@ export const identity = (_: any) => _
 /**
  * Generate a string containing static keys from compiler modules.
  */
+// 将所有的 staticKeys 归并到一个数组中，最后通过 join(',') 实现目的
 export function genStaticKeys(
   modules: Array<{ staticKeys?: string[] } /* ModuleOptions */>
 ): string {

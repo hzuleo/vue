@@ -18,6 +18,10 @@ function createFunction(code, errors) {
   }
 }
 
+// 1、缓存编译结果，通过 createCompileToFunctionFn 函数内声明的 cache 常量实现。
+// 2、调用 compile 函数将模板字符串转成渲染函数字符串
+// 3、调用 createFunction 函数将渲染函数字符串转成真正的渲染函数
+// 4、打印编译错误，包括：模板字符串 -> 渲染函数字符串 以及 渲染函数字符串 -> 渲染函数 这两个阶段的错误
 export function createCompileToFunctionFn(compile: Function): Function {
   const cache = Object.create(null)
 
@@ -26,13 +30,18 @@ export function createCompileToFunctionFn(compile: Function): Function {
     options?: CompilerOptions,
     vm?: Component
   ): CompiledFunctionResult {
+    // 使用 extend 函数将 options 的属性混合到新的对象中并重新赋值 options
     options = extend({}, options)
+    // 检查选项参数中是否包含 warn，如果没有则使用 baseWarn
     const warn = options.warn || baseWarn
+    // 将 options.warn 属性删除
     delete options.warn
 
     /* istanbul ignore if */
     if (__DEV__) {
       // detect possible CSP restriction
+      // 如果你的策略比较严格，那么 new Function() 将会受到影响，从而不能够使用
+      // 但是将模板字符串编译成渲染函数又依赖 new Function()
       try {
         new Function('return 1')
       } catch (e: any) {
@@ -53,10 +62,13 @@ export function createCompileToFunctionFn(compile: Function): Function {
       ? String(options.delimiters) + template
       : template
     if (cache[key]) {
+      // 缓存字符串模板的编译结果，防止重复编译，提升性能
       return cache[key]
     }
 
     // compile
+    // 最核心的代码
+    // 将 模板字符串 编译为 渲染函数字符串
     const compiled = compile(template, options)
 
     // check compilation errors/tips
@@ -90,8 +102,11 @@ export function createCompileToFunctionFn(compile: Function): Function {
 
     // turn code into functions
     const res: any = {}
+    // 当创建函数出错时的错误信息被 push 到这个数组里了
     const fnGenErrors: any[] = []
+    // compiled.render 是一个函数体字符串
     res.render = createFunction(compiled.render, fnGenErrors)
+    // staticRenderFns 的主要作用是渲染优化
     res.staticRenderFns = compiled.staticRenderFns.map(code => {
       return createFunction(code, fnGenErrors)
     })
@@ -100,6 +115,7 @@ export function createCompileToFunctionFn(compile: Function): Function {
     // this should only happen if there is a bug in the compiler itself.
     // mostly for codegen development use
     /* istanbul ignore if */
+    // 用来打印在生成渲染函数过程中的错误
     if (__DEV__) {
       if ((!compiled.errors || !compiled.errors.length) && fnGenErrors.length) {
         warn(
@@ -114,6 +130,7 @@ export function createCompileToFunctionFn(compile: Function): Function {
       }
     }
 
+    // 这样下一次发现如果 cache 中存在相同的 key 则不需要再次编译，直接使用缓存的结果就可以了。
     return (cache[key] = res)
   }
 }

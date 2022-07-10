@@ -1,5 +1,6 @@
 import { makeMap } from 'shared/util'
 
+// 检测给定的标签是否是一元标签。
 export const isUnaryTag = makeMap(
   'area,base,br,col,embed,frame,hr,img,input,isindex,keygen,' +
     'link,meta,param,source,track,wbr'
@@ -7,6 +8,9 @@ export const isUnaryTag = makeMap(
 
 // Elements that you can, intentionally, leave open
 // (and which close themselves)
+// 检测一个标签是否是那些虽然不是一元标签，但却可以自己补全并闭合的标签。
+// 比如 p 标签是一个双标签，你需要这样使用 <p>Some content</p>，但是你依然可以省略闭合标签，
+// 直接这样写：<p>Some content，且浏览器会自动补全。但是有些标签你不可以这样用，它们是严格的双标签。
 export const canBeLeftOpenTag = makeMap(
   'colgroup,dd,dt,li,options,p,td,tfoot,th,thead,tr,source'
 )
