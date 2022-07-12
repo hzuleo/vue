@@ -41,6 +41,7 @@ Vue.prototype.$mount = function (
 
   const options = this.$options
   // resolve template/el and convert to render function
+  // 检测是否包含 render 选项，即是否包含渲染函数。如果渲染函数存在那么什么都不会做，直接调用运行时版 $mount 函数即可
   if (!options.render) {
     // const new Vue({ el: '#foo', template: '<div id="bar"></div>' })
     // 获取模板(template)的过程：
@@ -74,6 +75,9 @@ Vue.prototype.$mount = function (
       // @ts-expect-error
       template = getOuterHTML(el)
     }
+    // 只有在 template 存在的情况下才会执行 if 语句块内的代码
+    // 使用 compileToFunctions 函数将模板(template)字符串编译为渲染函数(render)，
+    // 并将渲染函数添加到 vm.$options 选项中
     if (template) {
       /* istanbul ignore if */
       if (__DEV__ && config.performance && mark) {

@@ -107,6 +107,14 @@ export function mergeDataOrFn(
     // in a Vue.extend merge, both should be functions
     // 所以这里也必然是一个函数
     // 使用场景：Vue.extend({})
+    // const Parent = Vue.extend({
+    //   data: function () {
+    //     return {
+    //       test: 1
+    //     }
+    //   }
+    // })
+    // const Child = Parent.extend({})
     if (!childVal) {
       return parentVal
     }

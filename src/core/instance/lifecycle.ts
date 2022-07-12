@@ -36,8 +36,11 @@ export function initLifecycle(vm: Component) {
   const options = vm.$options
 
   // 将当前实例添加到父实例的 $children 属性里，并设置当前实例的 $parent 指向父实例
-  // locate first non-abstract parent
-  // 这里的 parent 属性是在哪里的？
+  // locate first non-abstract parent(查找第一个非抽象的父组件)
+  // 这里的 parent 属性是在哪里的？来历是 activeInstance
+  // 在 Vue 内部，会首先以子组件选项对象作为参数通过 Vue.extend 函数创建一个子类出来，
+  // 然后再通过实例化子类来创建子组件，而 createComponentInstanceForVnode(core/vdom/create-component.js) 函数的作用，
+  // 在这里可以简单理解为实例化子组件，只不过这个过程是在虚拟 DOM 的 patch 算法中进行的
   let parent = options.parent
   // 如果当前实例有父组件，且当前实例不是抽象的
   if (parent && !options.abstract) {

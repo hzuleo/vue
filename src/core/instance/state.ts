@@ -58,6 +58,7 @@ export function initState(vm: Component) {
 
   if (opts.methods) initMethods(vm, opts.methods)
   if (opts.data) {
+    // 注意，inject 和 props 这两个选项的初始化是先于 data 选项的
     initData(vm)
   } else {
     const ob = observe((vm._data = {}))
@@ -137,7 +138,8 @@ function initProps(vm: Component, propsOptions: Object) {
 // 最后调用 observe 函数开启响应式之路
 function initData(vm: Component) {
   let data: any = vm.$options.data
-  // beforeCreate 生命周期钩子函数是在 mergeOptions 函数之后 initData 之前被调用的
+  // 我们知道经过 mergeOptions 函数处理后 data 选项必然是一个函数，那么这里的判断还有必要吗？
+  // 因为 beforeCreate 生命周期钩子函数是在 mergeOptions 函数之后 initData 之前被调用的
   // 如果在 beforeCreate 生命周期钩子函数中修改了 vm.$options.data 的值，
   // 那么在 initData 函数中对于 vm.$options.data 类型的判断就是必要的了。
   data = vm._data = isFunction(data) ? getData(data, vm) : data || {}

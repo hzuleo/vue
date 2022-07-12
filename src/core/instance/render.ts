@@ -42,6 +42,7 @@ export function initRender(vm: Component) {
   const parentData = parentVnode && parentVnode.data
 
   /* istanbul ignore else */
+  // $attrs 和 $listeners 这两个属性是响应式的
   if (__DEV__) {
     defineReactive(
       vm,
